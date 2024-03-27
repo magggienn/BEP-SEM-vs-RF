@@ -1,5 +1,5 @@
 # 
-setwd("~/surfdrive/Predictive-Psychometrics/paper/SEM-Predictive Validity/versie2/Rcode")
+#setwd("~/surfdrive/Predictive-Psychometrics/paper/SEM-Predictive Validity/versie2/Rcode")
 library(mvtnorm)
 library(lavaan)
 library(glmnet)
