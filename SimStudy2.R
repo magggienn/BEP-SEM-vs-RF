@@ -1,9 +1,10 @@
 # 
-#setwd("~/surfdrive/Predictive-Psychometrics/paper/SEM-Predictive Validity/versie2/Rcode")
+setwd("/Users/magggien/Documents/BEP-SEM-vs-RF")
 library(mvtnorm)
 library(lavaan)
 library(glmnet)
 library(ggplot2)
+library(colorspace)
 
 rm(list=ls())
 source("predicty.lavaan.R")
@@ -57,7 +58,7 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
                              5.324,
                              -0.461), 9, 1))
   
-  repetitions = 100
+  repetitions = 10
   
   if(!direct){
     PE = data.frame(repetition = rep(1:repetitions, each = 32),
@@ -179,6 +180,7 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
           # fit SEM and predict
           fit <- sem(model, data = df[idx1, ], std.lv = TRUE, meanstructure = TRUE, warn = FALSE)
           yhat.sem = predicty.lavaan(fit, newdata = df[idx2, ], xnames = xnames, ynames = ynames)
+
           
           # fit EN and predict
           cvs = rep(NA, 11)  
@@ -195,15 +197,19 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
           
           PE$pe[((teller1 -1)*2 + 1): (teller1*2)] = pe.iter
           PE$vareta[((teller1 -1)*2 + 1): (teller1*2)] = rep(vareta, 2)
+          
         }
       }
     }
   }
+  
+  
   PE$M = as.factor(PE$M)
   PE$N = as.factor(PE$N)
   PE$S = as.factor(PE$S)
   PE$model = as.factor(PE$model)
   return(PE)
+  
 }
 
 
@@ -244,10 +250,10 @@ p1 <- ggplot(PE1, aes(x=model, y=pe, fill=factor(model))) +
   xlab("Model") + 
   ylab("RMSEp") + 
   scale_fill_manual(values = mycolor) + 
-  ggtitle("Simulation Study 1") + 
-  theme_apa(legend.pos = "none")
+  ggtitle("Simulation Study 1") 
+  #theme_apa(legend.pos = "none")
 
-ggsave("~/surfdrive/Predictive-Psychometrics/paper/SEM-Predictive Validity/versie2/Figures/sim1.pdf", 
+ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim1.pdf", 
        plot = p1, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
 
 p2 <- ggplot(PE2, aes(x=model, y=pe, fill=factor(model))) + 
@@ -257,10 +263,10 @@ p2 <- ggplot(PE2, aes(x=model, y=pe, fill=factor(model))) +
   xlab("Model") + 
   ylab("RMSEp") + 
   scale_fill_manual(values = mycolor) + 
-  ggtitle("Simulation Study 2") +
-  theme_apa(legend.pos = "none")
+  ggtitle("Simulation Study 2") 
+  #+theme_apa(legend.pos = "none")
 
-ggsave("~/surfdrive/Predictive-Psychometrics/paper/SEM-Predictive Validity/versie2/Figures/sim2.pdf", 
+ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim2.pdf", 
        plot = p2, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
 
 p3 <- ggplot(PE3, aes(x=model, y=pe, fill=factor(model))) + 
@@ -270,10 +276,10 @@ p3 <- ggplot(PE3, aes(x=model, y=pe, fill=factor(model))) +
   xlab("Model") + 
   ylab("RMSEp") + 
   scale_fill_manual(values = mycolor) + 
-  ggtitle("Simulation Study 3") + 
-  theme_apa(legend.pos = "none")
+  ggtitle("Simulation Study 3")  
+  #+theme_apa(legend.pos = "none")
 
-ggsave("~/surfdrive/Predictive-Psychometrics/paper/SEM-Predictive Validity/versie2/Figures/sim3.pdf", 
+ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim3.pdf", 
        plot = p3, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
 
 # make summaries
@@ -302,8 +308,8 @@ PE3 %>%
 library(rstatix)
 library(xtable)
 
-load("~/surfdrive/Predictive-Psychometrics/paper/SEM-Predictive Validity/versie2/Rcode/simstudy1final.Rdata")
-PE1$id = rep(1:1600, each = 2)
+load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy1final.Rdata")
+PE1$id = rep(1:16, each = 2)
 res.aov1 <- anova_test(
   data = PE1, 
   dv = pe, 
@@ -313,8 +319,8 @@ res.aov1 <- anova_test(
   effect.size = "pes")
 xtable(res.aov1)
 
-load("~/surfdrive/Predictive-Psychometrics/paper/SEM-Predictive Validity/versie2/Rcode/simstudy2final.Rdata")
-PE2$id = rep(1:1600, each = 2)
+load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy2final.Rdata")
+PE2$id = rep(1:16, each = 2)
 res.aov2 <- anova_test(
   data = PE2, 
   dv = pe, 
@@ -324,8 +330,8 @@ res.aov2 <- anova_test(
   effect.size = "pes")
 xtable(res.aov2)
 
-load("~/surfdrive/Predictive-Psychometrics/paper/SEM-Predictive Validity/versie2/Rcode/simstudy3final.Rdata")
-PE3$id = rep(1:1600, each = 2)
+load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy3final.Rdata")
+PE3$id = rep(1:16, each = 2)
 res.aov3 <- anova_test(
   data = PE3, 
   dv = pe, 
