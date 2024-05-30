@@ -182,43 +182,67 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
     dfpredictors = data.frame(X)
     dfoutcomes = data.frame(Y)
     
-    rmse_list <- list()
-    all_predictions_rf <- list()
+    #create new data frame for RF
+    # Create latent variables l1 to l9
+    latent_vars <- data.frame(
+      l1 = rowSums(df[, c("x1", "x2", "x3", "x4")]),
+      l2 = rowSums(df[, c("x5", "x6", "x7", "x8")]),
+      l3 = rowSums(df[, c("x9", "x10", "x11", "x12")]),
+      l4 = rowSums(df[, c("x13", "x14", "x15", "x16")]),
+      l5 = rowSums(df[, c("x17", "x18", "x19", "x20")]),
+      l6 = rowSums(df[, c("x21", "x22", "x23", "x24")]),
+      l7 = rowSums(df[, c("x25", "x26", "x27", "x28")]),
+      l8 = rowSums(df[, c("x29", "x30", "x31", "x32")]),
+      l9 = rowSums(df[, c("x33", "x34", "x35", "x36")])
+    )
     
-    # Prepare the training and testing datasets
-    train_data_rf <- dfpredictors[idx1, ]
-    test_data_rf <- dfpredictors [idx2,]
-    train_labels_rf <- dfoutcomes[idx1,]
-    test_labels_rf <- dfoutcomes[idx2, ]
+    # Create variable y as the sum of all 16 y variables
+    y <- rowSums(df[, ynames])
     
-    n_tree <- 500 # Number of trees
-    mtree <- 1 # Number of variables to possibly split at in each node
-    min_leaf <- 1 # Minimum number of observations in each leaf node
+    # Combine latent variables and y into a new dataframe
+    new_df <- data.frame(latent_vars, y = y)
     
-    predictions_rf <- build_forest_predict(train_data_rf, train_labels_rf, n_tree, mtree, min_leaf, test_data_rf)
-    write.csv(predictions_rf, file = "predictions_rf.csv")
-
-    # Initialize lists to store results
-    multirmse_list <- list()
-    all_predictions_rf <- list()
-
-    # Fit the Multivariate Random Forest model
-    # predictions_rf <- MultivariateRandomForest(trainX, trainY, n_tree, mtree, min_leaf, testX)
-
-    # Function to calculate RMSE for each outcome variable
-    calculate_rmse <- function(true_values, predicted_values) {
-      sqrt(mean((true_values - predicted_values)^2))
-    }
-
-    # Calculate RMSE for each outcome variable and store the predictions
-    for (i in 1:ncol(test_labels_rf)) {
-      rmse <- calculate_rmse(test_labels_rf[, i], predictions_rf[, i])
-      multirmse_list[[paste("y", i, sep = "")]] <- rmse
-      all_predictions_rf[[paste("y", i, sep = "")]] <- predictions_rf[, i]
-    }
-
-    # Print RMSE for each outcome variable
-    print(multirmse_list)
+    # Display the new dataframe
+    print(new_df)
+    # 
+    # 
+    # rmse_list <- list()
+    # all_predictions_rf <- list()
+    # 
+    # # Prepare the training and testing datasets
+    # item_indicators_data_train <- dfpredictors[idx1, ]
+    # item_indicators_data_test <- dfpredictors [idx2,]
+    # train_labels_rf <- dfoutcomes[idx1,]
+    # test_labels_rf <- dfoutcomes[idx2, ]
+    # 
+    # n_tree <- 500 # Number of trees
+    # mtree <- 1 # Number of variables to possibly split at in each node
+    # min_leaf <- 1 # Minimum number of observations in each leaf node
+    # 
+    # predictions_rf <- build_forest_predict(train_data_rf, train_labels_rf, n_tree, mtree, min_leaf, test_data_rf)
+    # write.csv(predictions_rf, file = "predictions_rf.csv")
+    # 
+    # # Initialize lists to store results
+    # multirmse_list <- list()
+    # all_predictions_rf <- list()
+    # 
+    # # Fit the Multivariate Random Forest model
+    # # predictions_rf <- MultivariateRandomForest(trainX, trainY, n_tree, mtree, min_leaf, testX)
+    # 
+    # # Function to calculate RMSE for each outcome variable
+    # calculate_rmse <- function(true_values, predicted_values) {
+    #   sqrt(mean((true_values - predicted_values)^2))
+    # }
+    # 
+    # # Calculate RMSE for each outcome variable and store the predictions
+    # for (i in 1:ncol(test_labels_rf)) {
+    #   rmse <- calculate_rmse(test_labels_rf[, i], predictions_rf[, i])
+    #   multirmse_list[[paste("y", i, sep = "")]] <- rmse
+    #   all_predictions_rf[[paste("y", i, sep = "")]] <- predictions_rf[, i]
+    # }
+    # 
+    # # Print RMSE for each outcome variable
+    # print(multirmse_list)
     # 
     # 
     # for (i in 1:ncol(dfoutcomes)){
@@ -255,7 +279,9 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
     yhat.sem = predicty.lavaan(fit, newdata = df[idx2, ], xnames = xnames, ynames = ynames)
 
     # store results
-    pe.iter = c(sqrt(mean((Y[idx2,] - yhat.sem)^2)),multirmse_list$rmse)
+    # pe.iter = c(sqrt(mean((Y[idx2,] - yhat.sem)^2)),multirmse_list$rmse)
+    
+    pe.iter = c(sqrt(mean((Y[idx2,] - yhat.sem)^2)))
     
     # pe.iter = c(sqrt(mean((Y[idx2,] - yhat.sem)^2)))
     PE$pe[((teller1 -1)*2 + 1): (teller1*2)] = pe.iter
