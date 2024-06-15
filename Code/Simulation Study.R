@@ -9,6 +9,9 @@ library(randomForest)
 library(corrr)
 library(ggcorrplot)
 library(factoextra)
+library(MultivariateRandomForest)
+library(caret)  # Add caret package for hyperparameter tuning
+library(doParallel)  # For parallel processing
 
 
 rm(list=ls())
@@ -64,7 +67,7 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
                              5.324,
                              -0.461), 9, 1))
   
-  repetitions = 1
+  repetitions = 100
   
   if(!direct){
     PE = data.frame(repetition = rep(1:repetitions, each = 32),
@@ -119,7 +122,7 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
             X = matrix(NA, n, 36)
             Y = matrix(NA, n, 16)
             
-            # can adjust factor loadings for strong/wide/weak measurement model
+            # can adjust factor loadings for strong/weak measurement model
             if(meas == "M:strong"){
               lambda = runif(36, min = 0.5, max = 0.8)
             }
@@ -179,115 +182,143 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
           colnames(df) = c(paste("x", c(1:36), sep = ""), paste("y", c(1:16), sep = ""))
           xnames = paste("x", c(1:36), sep = "")
           ynames = paste("y", c(1:16), sep = "")
-          dfpredictors = data.frame(X)
-          dfoutcomes = data.frame(Y)
-          
-          rmse_list <- list()
-          all_predictions_rf <- list()
-          
-          
-          for (i in 1:ncol(dfoutcomes)){
-            lv_column <- dfoutcomes[, i]
-            df_rf = data.frame(cbind(dfpredictors, lv_column))
-            
-            
-            # Prepare the training and testing datasets
-            train_data_rf <- df_rf[idx1, -ncol(df_rf)]
-            test_data_rf <- df_rf[idx2, -ncol(df_rf)]
-            train_labels_rf <- df_rf[idx1, ncol(df_rf)]
-            test_labels_rf <- df_rf[idx2, ncol(df_rf)]
-            
-            # Fit the Random Forest model
-            rf_model <- randomForest(x = train_data_rf, y = train_labels_rf, ntree = 500)
-            yhat_rf <- predict(rf_model, newdata = test_data_rf)
-            
-            # Add the predictions to the list with the column name
-            all_predictions_rf[[colnames(dfoutcomes)[i]]] <- yhat_rf
-            
-            # Print the RMSE for each outcome variable
-            rmse_rf <- sqrt(mean((test_labels_rf - yhat_rf)^2))
-            cat("Outcome Variable", i, "RMSE:", rmse_rf, "\n")
-            # Add the RMSE to the list with the column name as key
-            rmse_list[[colnames(dfoutcomes)[i]]] <- rmse_rf
-          }
-          
-          # Combine RMSEs into a single data frame
-          rmse_rf <- data.frame(variable = names(rmse_list), rmse = unlist(rmse_list), row.names = NULL)
-          
-          
+        
+        
           # fit SEM and predict
           fit <- sem(model, data = df[idx1, ], std.lv = TRUE, meanstructure = TRUE, warn = FALSE)
           yhat.sem = predicty.lavaan(fit, newdata = df[idx2, ], xnames = xnames, ynames = ynames)
           
-          # Loop for fitting Random Forest model to each latent variable column and predicting
-          # for (lv in 1:9) {
-          #   # Determine the columns corresponding to the current latent variable
-          #   lv_columns <- paste0("x", (lv-1)*4 + 1:4)
-          #   
-          #   # Prepare the training and testing datasets
-          #   train_data <- df[idx1, lv_columns]
-          #   test_data <- df[idx2, lv_columns]
-          #   train_labels <- df[idx1, "y"]
-          #   test_labels <- df[idx2, "y"]
-          #   
-          #   # Fit the Random Forest model
-          #   rf_model <- randomForest(x = train_data, y = train_labels, ntree = 500)
-          #   
-          #   # Predict using the fitted model
-          #   yhat_rf <- predict(rf_model, newdata = test_data)
-          #   
-          #   # Save the predictions
-          #   predictions_file <- paste0("yhat_rf_lv", lv, ".csv")
-          #   write.csv(yhat_rf, file = predictions_file, row.names = FALSE)
-          #   
-          #   # Optionally, print the RMSE for each latent variable
-          #   rmse_rf <- sqrt(mean((test_labels - yhat_rf)^2))
-          #   cat("Latent Variable", lv, "RMSE:", rmse_rf, "\n")
-          # }
+          
+          # Create latent variables l1 to l9
+          latent_vars <- data.frame(
+            l1 = rowSums(df[, c("x1", "x2", "x3", "x4")]),
+            l2 = rowSums(df[, c("x5", "x6", "x7", "x8")]),
+            l3 = rowSums(df[, c("x9", "x10", "x11", "x12")]),
+            l4 = rowSums(df[, c("x13", "x14", "x15", "x16")]),
+            l5 = rowSums(df[, c("x17", "x18", "x19", "x20")]),
+            l6 = rowSums(df[, c("x21", "x22", "x23", "x24")]),
+            l7 = rowSums(df[, c("x25", "x26", "x27", "x28")]),
+            l8 = rowSums(df[, c("x29", "x30", "x31", "x32")]),
+            l9 = rowSums(df[, c("x33", "x34", "x35", "x36")])
+          )
+          
+          # Create variable y as the sum of all 16 y variables
+          y <- rowSums(df[, ynames])
+          
+          # Combine latent variables and y into a new dataframe
+          latent_vars_df <- data.frame(latent_vars, y = y)
+          
+          # Split the data into training and testing sets
+          train_data_rf <- latent_vars_df[idx1,]
+          train_latentvars_data_rf <- train_data_rf[,-ncol(train_data_rf)]
+          
+          test_data_rf <- latent_vars_df [idx2,]
+          test_latentvars_data_rf <- test_data_rf[,-ncol(test_data_rf)]
+          
+          # random_state = 1234 #same as the one in the beginning of the function
+          # control <- trainControl(method = "cv", number = 10, allowParallel = TRUE)
+          # 
+          # tuneGrid <- expand.grid(splitrule = "variance",
+          #                         min.node.size = c(5, 10, 15), mtry = c(1:9))
+          # print(tuneGrid)
+          # 
+          # rf_model <- train(x = train_latentvars_data_rf, y = train_data_rf$y,
+          #                   method = "ranger",
+          #                   trControl = control,
+          #                   metric = "RMSE",
+          #                   maximize = TRUE,
+          #                   random_state = random_state,
+          #                   tuneLength = 3,
+          #                   num.trees = 1000,
+          #                   impurity = "variance",
+          #                   verbose = TRUE,
+          #                   num.thread = 6,
+          #                   treetype = "regression"
+          #                   )
+          #                   #why the tuneleght is 3? (it is the number of hyperparameters to try)
+          # 
+          # yhat_rf <- predict(rf_model, newdata = test_latentvars_data_rf)
+
+          # # Define the grid of hyperparameters to tune
+          # tuneGrid <- expand.grid(nodesize= c(5, 10, 15), mtry = c(1:9))
+          # print(tuneGrid)
+          # 
           
           
-          # fit Random Forests and predict
-          #idx1 - trainnig
-          #idx2 - prediction
-          #for loop for the rf per latent variable = estimate and immediatly predict- save the results from the prediction
-          # Normalize the predictor variables (features)
-          # scaled_df <- scale(df[, 37:ncol(df)])
-          # corr_matrix <- cor(scaled_df)
+          ## Fit the untuned Random Forest model
+          # rf_model <- randomForest(x = train_latentvars_data_rf, y = train_data_rf$y, ntree = 500)
+          # yhat_rf <- predict(rf_model, newdata = test_latentvars_data_rf)
           # 
-          # # Save the correlation plot
-          # p1 <- ggcorrplot(corr_matrix)
-          # 
-          # # Perform PCA on the normalized data
-          # pca_result <- prcomp(scaled_df, scale. = FALSE)  # Already normalized
-          # prop_variance <- pca_result$sdev^2 / sum(pca_result$sdev^2)
-          # pc_scores <- pca_result$x
-          # pca_data <- as.data.frame(pc_scores)
-          # 
-          # # Extract the first 36 columns of the original dataframe as predictors
-          # predictors <- df[, 1:36]
-          # 
-          # # Create a new dataframe combining predictors and the principal component
-          # transformed_data <- cbind(predictors, PCA_Component = pca_data[,1])
-          # 
-          # colnames(transformed_data) <- c(paste0("Predictor_", 1:36), "PCA_Component")
-          # 
-          # set.seed(123)  # for reproducibility
-          # train_indices <- sample(1:nrow(transformed_data), 0.8 * nrow(transformed_data))
-          # train_data <- transformed_data[train_indices,]
-          # test_data <- transformed_data[-train_indices,]
-          # 
-          # #Fit the random forest model
-          # rf_model <- randomForest(PCA_Component~.,train_data, ntree = 500)
-          # print(rf_model)
-          # yhat.rf <- predict(rf_model, newdata = test_data[-train_indices,])
-          # rmse_rf <- sqrt(mean((test_data$PCA_Component - yhat.rf)^2))
-          # print(rmse_rf)
-          # var_rf <- var(yhat.rf)
-          # print(var_rf)
           
-          #save the results per iteration
-          # pe.iter = c(sqrt(mean((Y[idx2,] - yhat.sem)^2)),  sqrt(mean((test_data$PCA_Component - yhat.rf)^2)))
-          pe.iter = c(sqrt(mean((Y[idx2,] - yhat.sem)^2)),rmse_rf$rmse)
+          # Fit the tuned Random Forest model
+          
+          # Define a consistent random state
+          seeds <- vector(mode = "list", length = 6)
+          
+          # Prepare the training control and grid
+          control <- trainControl(method = "cv", number = 5, allowParallel = TRUE)
+
+          # Hyperparameter grid for ranger
+          tuneGrid_ranger <- expand.grid(
+            splitrule = "variance",
+            min.node.size = c(5, 10, 15),
+            mtry = c(1:9)
+          )
+          
+          # Train ranger model
+          rf_model_ranger <- train(
+            x = train_latentvars_data_rf, y = train_data_rf$y,
+            method = "ranger",
+            trControl = control,
+            tuneGrid = tuneGrid_ranger,
+            metric = "RMSE",
+            num.trees = 500,
+            importance = "impurity",
+            num.threads = 6,
+            treetype = "regression"
+          )
+          yhat_ranger <- predict(rf_model_ranger, newdata = test_latentvars_data_rf)
+
+          # # Hyperparameter grid for randomForest
+          # tuneGrid_rf <- expand.grid(
+          #   nodesize = c(5, 10, 15),
+          #   mtry = c(1:9)
+          # )
+          # 
+          # 
+          #
+          # # Train randomForest model
+          # set.seed(random_state)
+          # rf_model_rf <- randomForest(
+          #   x = train_latentvars_data_rf, y = train_data_rf$y,
+          #   ntree = 1000,
+          #   mtry = tuneGrid_rf$mtry[1],
+          #   nodesize = tuneGrid_rf$nodesize[1],
+          #   importance = TRUE,
+          #   seed = random_state
+          # )
+          #
+          # # Predict
+         
+          # yhat_rf <- predict(rf_model_rf, newdata = test_latentvars_data_rf)
+          # 
+          # # Calculate RMSE for both models
+          # rmse_ranger <- sqrt(mean((test_data_rf$y - yhat_ranger)^2))
+          # rmse_rf <- sqrt(mean((test_data_rf$y - yhat_rf)^2))
+          # 
+          # # Print RMSE for comparison
+          # cat("RMSE ranger:", rmse_ranger, "\n")
+          # cat("RMSE randomForest:", rmse_rf, "\n")
+
+          # # Print the RMSE for each outcome variable
+          # rmse_rf <- sqrt(mean((test_data_rf$y - yhat_rf)^2))
+          # cat("Outcome Variable RMSE:", rmse_rf, "\n")
+         
+          
+          # store results
+          pe.iter = c(sqrt(mean((Y[idx2,] - yhat.sem)^2)), sqrt(mean((test_data_rf$y - yhat_ranger)^2)))
+          
+          # pe.iter = c(sqrt(mean((Y[idx2,] - yhat.sem)^2)))
           PE$pe[((teller1 -1)*2 + 1): (teller1*2)] = pe.iter
           PE$vareta[((teller1 -1) * 2 + 1): (teller1 * 2)] = rep(vareta, 2)
           
@@ -295,8 +326,6 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
       }
     }
   }
-  
-  
   PE$M = as.factor(PE$M)
   PE$N = as.factor(PE$N)
   PE$S = as.factor(PE$S)
@@ -305,7 +334,6 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
   return(PE)
   
 }
-
 
 PE1 = simstudy(samplesize = c(100, 200, 500, 1000), 
                measurement = c("M:weak", "M:strong"),
@@ -328,11 +356,10 @@ PE3 = simstudy(samplesize = c(100, 200, 500, 1000),
                skewtheta = FALSE, 
                direct = TRUE)
 
-
 # save results
-save(PE1, file = "simstudy1final.Rdata")
-save(PE2, file = "simstudy2final.Rdata")
-save(PE3, file = "simstudy3final.Rdata")
+save(PE1, file = "simstudy1final_complexrf.Rdata")
+save(PE2, file = "simstudy2final_complexrf.Rdata")
+save(PE3, file = "simstudy3final_complexrf.Rdata")
 
 # plot results
 mycolor = c(sequential_hcl(5, palette = "Reds 3")[2], sequential_hcl(5, palette = "Greens 2")[2])
@@ -346,10 +373,10 @@ p1 <- ggplot(PE1, aes(x=model, y=pe, fill=factor(model))) +
   scale_fill_manual(values = mycolor) + 
   ggtitle("Simulation Study 1") 
 #theme_apa(legend.pos = "none")
-
-ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim1-rf_100rep.pdf", 
-       plot = p1, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
 print(p1)
+
+ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim1_complexrf_100rep.pdf", 
+       plot = p1, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
 
 p2 <- ggplot(PE2, aes(x=model, y=pe, fill=factor(model))) + 
   geom_boxplot(aes(group = factor(model))) + 
@@ -362,7 +389,7 @@ p2 <- ggplot(PE2, aes(x=model, y=pe, fill=factor(model))) +
 #+theme_apa(legend.pos = "none")
 print(p2)
 
-ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim2.pdf", 
+ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim2_complexrf_100rep.pdf", 
        plot = p2, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
 
 p3 <- ggplot(PE3, aes(x=model, y=pe, fill=factor(model))) + 
@@ -375,7 +402,7 @@ p3 <- ggplot(PE3, aes(x=model, y=pe, fill=factor(model))) +
   ggtitle("Simulation Study 3")  
 #+theme_apa(legend.pos = "none")
 
-ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim3.pdf", 
+ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim3_complexrf_100rep.pdf", 
        plot = p3, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
 print(p3)
 
@@ -405,35 +432,35 @@ PE3 %>%
 library(rstatix)
 library(xtable)
 
-load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy1final.Rdata")
-PE1$id = rep(1:16, each = 2)
+load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy1final_complexrf.Rdata")
+PE1$id = rep(1:(nrow(PE1)/2), each = 2)
 res.aov1 <- anova_test(
-  data = PE1, 
-  dv = pe, 
+  data = PE1,
+  dv = pe,
   wid = id,
-  within = model, 
   between = c(N, M, S),
+  within = model,
   effect.size = "pes")
 xtable(res.aov1)
 
-load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy2final.Rdata")
-PE2$id = rep(1:16, each = 2)
+load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy2final_complexrf.Rdata")
+PE2$id = rep(1:(nrow(PE2)/2), each = 2)
 res.aov2 <- anova_test(
-  data = PE2, 
-  dv = pe, 
+  data = PE2,
+  dv = pe,
   wid = id,
-  within = model, 
+  within = model,
   between = c(N, M, S),
   effect.size = "pes")
 xtable(res.aov2)
 
-load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy3final.Rdata")
-PE3$id = rep(1:16, each = 2)
+load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy3final_correctrf.Rdata")
+PE3$id = rep(1:(nrow(PE3)/2), each = 2)
 res.aov3 <- anova_test(
-  data = PE3, 
-  dv = pe, 
+  data = PE3,
+  dv = pe,
   wid = id,
-  within = model, 
+  within = model,
   between = c(N, M, S),
   effect.size = "pes")
 xtable(res.aov3)
