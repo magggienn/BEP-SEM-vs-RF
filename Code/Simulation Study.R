@@ -297,129 +297,208 @@ save(PE1, file = "simstudy1final_complexrf.Rdata")
 save(PE2, file = "simstudy2final_complexrf.Rdata")
 save(PE3, file = "simstudy3final_complexrf.Rdata")
 
-# plot results
-mycolor = c(sequential_hcl(5, palette = "Reds 3")[2], sequential_hcl(5, palette = "Greens 2")[2])
+# # plot results
+# mycolor = c(sequential_hcl(5, palette = "Reds 3")[2], sequential_hcl(5, palette = "Greens 2")[2])
+# 
+# p1 <- ggplot(PE1, aes(x=model, y=pe, fill=factor(model))) + 
+#   geom_boxplot(aes(group = factor(model))) + 
+#   geom_jitter(width = 0.05, height = 0, colour = rgb(0,0,0,.3)) + 
+#   facet_grid(N ~ M * S) +
+#   xlab("Model") + 
+#   ylab("RMSEp") + 
+#   scale_fill_manual(values = mycolor) + 
+#   ggtitle("Simulation Study 1") 
+# #theme_apa(legend.pos = "none")
+# print(p1)
+# 
+# ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim1_untuned_100rep.pdf", 
+#        plot = p1, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
+# 
+# p2 <- ggplot(PE2, aes(x=model, y=pe, fill=factor(model))) + 
+#   geom_boxplot(aes(group = factor(model))) + 
+#   geom_jitter(width = 0.05, height = 0, colour = rgb(0,0,0,.3)) + 
+#   facet_grid(N ~ M * S) +
+#   xlab("Model") + 
+#   ylab("RMSEp") + 
+#   scale_fill_manual(values = mycolor) + 
+#   ggtitle("Simulation Study 2") 
+# #+theme_apa(legend.pos = "none")
+# print(p2)
+# 
+# ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim2_complexrf_100rep.pdf", 
+#        plot = p2, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
+# 
+# p3 <- ggplot(PE3, aes(x=model, y=pe, fill=factor(model))) + 
+#   geom_boxplot(aes(group = factor(model))) + 
+#   geom_jitter(width = 0.05, height = 0, colour = rgb(0,0,0,.3)) + 
+#   facet_grid(N ~ M * S) +
+#   xlab("Model") + 
+#   ylab("RMSEp") + 
+#   scale_fill_manual(values = mycolor) + 
+#   ggtitle("Simulation Study 3")  
+# #+theme_apa(legend.pos = "none")
+# 
+# ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim3_complexrf_100rep.pdf", 
+#        plot = p3, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
+# print(p3)
+# 
+# # make summaries
+# library(tidyverse)
+# PE1 %>%
+#   group_by(N, M, S) %>%
+#   summarize(mean = mean(vareta))
+# 
+# sum.pe1 = PE1 %>%
+#   group_by(N, M, S, model) %>%
+#   summarize(mean = mean(pe))
+# 
+# sum.pe2 = PE2 %>%
+#   group_by(N, M, S, model) %>%
+#   summarize(mean = mean(pe))
+# 
+# sum.pe3 = PE3 %>%
+#   group_by(N, M, S, model) %>%
+#   summarize(mean = mean(pe))
+# 
+# PE3 %>%
+#   group_by(N, M, S) %>%
+#   summarize(mean = mean(vareta))
+# 
+# # ANOVAs
+# library(rstatix)
+# library(xtable)
+# library(dplyr)
+# 
+# load("/Users/magggien/Documents/BEP-SEM-vs-RF/Simulation Files/Tuned Random Forest/simstudy1final_ranger.Rdata")
+# PE1$id = rep(1:(nrow(PE1)/2), each = 2)
+# res.aov1 <- anova_test(
+#   data = PE1,
+#   dv = pe,
+#   wid = id,
+#   between = c(N, M, S),
+#   within = model,
+#   effect.size = "pes")
+# xtable(res.aov1)
+# 
+# df_sem <- PE1[PE1$model == 'sem', ]
+# 
+# # Calculate summary statistics
+# sem_summary <- df_sem %>%
+#   summarise(
+#     Min = min(vareta),
+#     Max = max(vareta),
+#     Mean = mean(vareta),
+#     Median = median(vareta),
+#     `Std Dev` = sd(vareta),
+#     Variance = var(vareta),
+#     Range = max(vareta) - min(vareta),
+#     `25%` = quantile(vareta, 0.25),
+#     `50%` = quantile(vareta, 0.50),
+#     `75%` = quantile(vareta, 0.75)
+#   )
+# 
+# print(sem_summary)
+# 
+# sem_summary_table <- as.data.frame(t(sem_summary))
+# colnames(sem_summary_table) <- c("Value")
+# sem_summary_table$Statistic <- rownames(sem_summary_table)
+# sem_summary_table <- sem_summary_table[, c("Statistic", "Value")]
+# 
+# xtable(sem_summary_table)
+# 
+# df_rf <- PE1[PE1$model == 'rf', ]
+# print(df_rf)
+# 
+# # Calculate the average of each repetition
+# average_performance_untuned <- df_rf %>%
+#   group_by(repetition) %>%
+#   summarise(across(c(N, pe, vareta), mean, .names = "mean_{col}"))
+# xtable(average_performance_untuned)
+# # Calculate the overall average across all repetitions
+# overall_average_untuned <- average_performance_untuned %>%
+#   summarise(across(starts_with("mean"), mean))
+# xtable(overall_average_untuned )
+# # Calculate the average of each repetition
+# average_performance_tuned <- df_rf %>%
+#   group_by(repetition) %>%
+#   summarise(across(c(N, pe, vareta), mean, .names = "mean_{col}"))
+# 
+# # Calculate the overall average across all repetitions
+# overall_average_tuned <- average_performance_tuned %>%
+#   summarise(across(starts_with("mean"), mean))
+# 
+# 
+# xtable(overall_average_tuned )
+# load("/Users/magggien/Documents/BEP-SEM-vs-RF/Simulation Files/Tuned Random Forest/simstudy2final_ranger.Rdata")
+# PE2$id = rep(1:(nrow(PE2)/2), each = 2)
+# res.aov2 <- anova_test(
+#   data = PE2,
+#   dv = pe,
+#   wid = id,
+#   within = model,
+#   between = c(N, M, S),
+#   effect.size = "pes")
+# xtable(res.aov2)
+# 
+# df_sem <- PE2[PE2$model == 'sem', ]
+# 
+# # Calculate summary statistics
+# sem_summary <- df_sem %>%
+#   summarise(
+#     Min = min(vareta),
+#     Max = max(vareta),
+#     Mean = mean(vareta),
+#     Median = median(vareta),
+#     `Std Dev` = sd(vareta),
+#     Variance = var(vareta),
+#     Range = max(vareta) - min(vareta),
+#     `25%` = quantile(vareta, 0.25),
+#     `50%` = quantile(vareta, 0.50),
+#     `75%` = quantile(vareta, 0.75)
+#   )
+# 
+# sem_summary_table <- as.data.frame(t(sem_summary))
+# colnames(sem_summary_table) <- c("Value")
+# sem_summary_table$Statistic <- rownames(sem_summary_table)
+# sem_summary_table <- sem_summary_table[, c("Statistic", "Value")]
+# 
+# xtable(sem_summary_table)
+# 
+# 
+# load("/Users/magggien/Documents/BEP-SEM-vs-RF/Simulation Files/Tuned Random Forest/simstudy3final_ranger.Rdata")
+# PE3$id = rep(1:(nrow(PE3)/2), each = 2)
+# res.aov3 <- anova_test(
+#   data = PE3,
+#   dv = pe,
+#   wid = id,
+#   within = model,
+#   between = c(N, M, S),
+#   effect.size = "pes")
+# xtable(res.aov3)
+# 
+# 
+# df_sem <- PE3[PE3$model == 'sem', ]
+# 
+# # Calculate summary statistics
+# sem_summary <- df_sem %>%
+#   summarise(
+#     Min = min(vareta),
+#     Max = max(vareta),
+#     Mean = mean(vareta),
+#     Median = median(vareta),
+#     `Std Dev` = sd(vareta),
+#     Variance = var(vareta),
+#     Range = max(vareta) - min(vareta),
+#     `25%` = quantile(vareta, 0.25),
+#     `50%` = quantile(vareta, 0.50),
+#     `75%` = quantile(vareta, 0.75)
+#   )
+# 
+# sem_summary_table <- as.data.frame(t(sem_summary))
+# colnames(sem_summary_table) <- c("Value")
+# sem_summary_table$Statistic <- rownames(sem_summary_table)
+# sem_summary_table <- sem_summary_table[, c("Statistic", "Value")]
+# 
+# xtable(sem_summary_table)
 
-p1 <- ggplot(PE1, aes(x=model, y=pe, fill=factor(model))) + 
-  geom_boxplot(aes(group = factor(model))) + 
-  geom_jitter(width = 0.05, height = 0, colour = rgb(0,0,0,.3)) + 
-  facet_grid(N ~ M * S) +
-  xlab("Model") + 
-  ylab("RMSEp") + 
-  scale_fill_manual(values = mycolor) + 
-  ggtitle("Simulation Study 1") 
-#theme_apa(legend.pos = "none")
-print(p1)
-
-ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim1_untuned_100rep.pdf", 
-       plot = p1, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
-
-p2 <- ggplot(PE2, aes(x=model, y=pe, fill=factor(model))) + 
-  geom_boxplot(aes(group = factor(model))) + 
-  geom_jitter(width = 0.05, height = 0, colour = rgb(0,0,0,.3)) + 
-  facet_grid(N ~ M * S) +
-  xlab("Model") + 
-  ylab("RMSEp") + 
-  scale_fill_manual(values = mycolor) + 
-  ggtitle("Simulation Study 2") 
-#+theme_apa(legend.pos = "none")
-print(p2)
-
-ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim2_complexrf_100rep.pdf", 
-       plot = p2, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
-
-p3 <- ggplot(PE3, aes(x=model, y=pe, fill=factor(model))) + 
-  geom_boxplot(aes(group = factor(model))) + 
-  geom_jitter(width = 0.05, height = 0, colour = rgb(0,0,0,.3)) + 
-  facet_grid(N ~ M * S) +
-  xlab("Model") + 
-  ylab("RMSEp") + 
-  scale_fill_manual(values = mycolor) + 
-  ggtitle("Simulation Study 3")  
-#+theme_apa(legend.pos = "none")
-
-ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim3_complexrf_100rep.pdf", 
-       plot = p3, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
-print(p3)
-
-# make summaries
-library(tidyverse)
-PE1 %>%
-  group_by(N, M, S) %>%
-  summarize(mean = mean(vareta))
-
-sum.pe1 = PE1 %>%
-  group_by(N, M, S, model) %>%
-  summarize(mean = mean(pe))
-
-sum.pe2 = PE2 %>%
-  group_by(N, M, S, model) %>%
-  summarize(mean = mean(pe))
-
-sum.pe3 = PE3 %>%
-  group_by(N, M, S, model) %>%
-  summarize(mean = mean(pe))
-
-PE3 %>%
-  group_by(N, M, S) %>%
-  summarize(mean = mean(vareta))
-
-# ANOVAs
-library(rstatix)
-library(xtable)
-library(dplyr)
-
-load("/Users/magggien/Documents/BEP-SEM-vs-RF/Simulation Files/Tuned Random Forest/simstudy1final_complexrf.Rdata")
-PE1$id = rep(1:(nrow(PE1)/2), each = 2)
-res.aov1 <- anova_test(
-  data = PE1,
-  dv = pe,
-  wid = id,
-  between = c(N, M, S),
-  within = model,
-  effect.size = "pes")
-xtable(res.aov1)
-
-df_rf <- PE1[PE1$model == 'rf', ]
-print(df_rf)
-
-# Calculate the average of each repetition
-average_performance_untuned <- df_rf %>%
-  group_by(repetition) %>%
-  summarise(across(c(N, pe, vareta), mean, .names = "mean_{col}"))
-xtable(average_performance_untuned)
-# Calculate the overall average across all repetitions
-overall_average_untuned <- average_performance_untuned %>%
-  summarise(across(starts_with("mean"), mean))
-xtable(overall_average_untuned )
-# Calculate the average of each repetition
-average_performance_tuned <- df_rf %>%
-  group_by(repetition) %>%
-  summarise(across(c(N, pe, vareta), mean, .names = "mean_{col}"))
-
-# Calculate the overall average across all repetitions
-overall_average_tuned <- average_performance_tuned %>%
-  summarise(across(starts_with("mean"), mean))
-xtable(overall_average_tuned )
-load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy2final_complexrf.Rdata")
-PE2$id = rep(1:(nrow(PE2)/2), each = 2)
-res.aov2 <- anova_test(
-  data = PE2,
-  dv = pe,
-  wid = id,
-  within = model,
-  between = c(N, M, S),
-  effect.size = "pes")
-xtable(res.aov2)
-
-load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy3final_correctrf.Rdata")
-PE3$id = rep(1:(nrow(PE3)/2), each = 2)
-res.aov3 <- anova_test(
-  data = PE3,
-  dv = pe,
-  wid = id,
-  within = model,
-  between = c(N, M, S),
-  effect.size = "pes")
-xtable(res.aov3)
 
