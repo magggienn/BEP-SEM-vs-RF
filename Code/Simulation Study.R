@@ -1,5 +1,5 @@
 # 
-setwd("/Users/magggien/Documents/BEP-SEM-vs-RF")
+setwd("/Users/magggien/Documents/BEP-SEM-vs-RF/Code")
 library(mvtnorm)
 library(lavaan)
 library(glmnet)
@@ -215,36 +215,6 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
           test_data_rf <- latent_vars_df [idx2,]
           test_latentvars_data_rf <- test_data_rf[,-ncol(test_data_rf)]
           
-          # random_state = 1234 #same as the one in the beginning of the function
-          # control <- trainControl(method = "cv", number = 10, allowParallel = TRUE)
-          # 
-          # tuneGrid <- expand.grid(splitrule = "variance",
-          #                         min.node.size = c(5, 10, 15), mtry = c(1:9))
-          # print(tuneGrid)
-          # 
-          # rf_model <- train(x = train_latentvars_data_rf, y = train_data_rf$y,
-          #                   method = "ranger",
-          #                   trControl = control,
-          #                   metric = "RMSE",
-          #                   maximize = TRUE,
-          #                   random_state = random_state,
-          #                   tuneLength = 3,
-          #                   num.trees = 1000,
-          #                   impurity = "variance",
-          #                   verbose = TRUE,
-          #                   num.thread = 6,
-          #                   treetype = "regression"
-          #                   )
-          #                   #why the tuneleght is 3? (it is the number of hyperparameters to try)
-          # 
-          # yhat_rf <- predict(rf_model, newdata = test_latentvars_data_rf)
-
-          # # Define the grid of hyperparameters to tune
-          # tuneGrid <- expand.grid(nodesize= c(5, 10, 15), mtry = c(1:9))
-          # print(tuneGrid)
-          # 
-          
-          
           ## Fit the untuned Random Forest model
           # rf_model <- randomForest(x = train_latentvars_data_rf, y = train_data_rf$y, ntree = 500)
           # yhat_rf <- predict(rf_model, newdata = test_latentvars_data_rf)
@@ -279,42 +249,6 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
           )
           yhat_ranger <- predict(rf_model_ranger, newdata = test_latentvars_data_rf)
 
-          # # Hyperparameter grid for randomForest
-          # tuneGrid_rf <- expand.grid(
-          #   nodesize = c(5, 10, 15),
-          #   mtry = c(1:9)
-          # )
-          # 
-          # 
-          #
-          # # Train randomForest model
-          # set.seed(random_state)
-          # rf_model_rf <- randomForest(
-          #   x = train_latentvars_data_rf, y = train_data_rf$y,
-          #   ntree = 1000,
-          #   mtry = tuneGrid_rf$mtry[1],
-          #   nodesize = tuneGrid_rf$nodesize[1],
-          #   importance = TRUE,
-          #   seed = random_state
-          # )
-          #
-          # # Predict
-         
-          # yhat_rf <- predict(rf_model_rf, newdata = test_latentvars_data_rf)
-          # 
-          # # Calculate RMSE for both models
-          # rmse_ranger <- sqrt(mean((test_data_rf$y - yhat_ranger)^2))
-          # rmse_rf <- sqrt(mean((test_data_rf$y - yhat_rf)^2))
-          # 
-          # # Print RMSE for comparison
-          # cat("RMSE ranger:", rmse_ranger, "\n")
-          # cat("RMSE randomForest:", rmse_rf, "\n")
-
-          # # Print the RMSE for each outcome variable
-          # rmse_rf <- sqrt(mean((test_data_rf$y - yhat_rf)^2))
-          # cat("Outcome Variable RMSE:", rmse_rf, "\n")
-         
-          
           # store results
           pe.iter = c(sqrt(mean((Y[idx2,] - yhat.sem)^2)), sqrt(mean((test_data_rf$y - yhat_ranger)^2)))
           
