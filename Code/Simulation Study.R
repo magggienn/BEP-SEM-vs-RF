@@ -321,6 +321,8 @@ simstudy = function(samplesize = c(100, 200, 500, 1000),
           # pe.iter = c(sqrt(mean((Y[idx2,] - yhat.sem)^2)))
           PE$pe[((teller1 -1)*2 + 1): (teller1*2)] = pe.iter
           PE$vareta[((teller1 -1) * 2 + 1): (teller1 * 2)] = rep(vareta, 2)
+          # what is vareta?
+          # vareta is the variance of the latent variable eta
           
         }
       }
@@ -375,7 +377,7 @@ p1 <- ggplot(PE1, aes(x=model, y=pe, fill=factor(model))) +
 #theme_apa(legend.pos = "none")
 print(p1)
 
-ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim1_complexrf_100rep.pdf", 
+ggsave("/Users/magggien/Documents/BEP-SEM-vs-RF/sim1_untuned_100rep.pdf", 
        plot = p1, width = 11.7, height = 8.3, units = "in", limitsize = FALSE)
 
 p2 <- ggplot(PE2, aes(x=model, y=pe, fill=factor(model))) + 
@@ -431,8 +433,9 @@ PE3 %>%
 # ANOVAs
 library(rstatix)
 library(xtable)
+library(dplyr)
 
-load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy1final_complexrf.Rdata")
+load("/Users/magggien/Documents/BEP-SEM-vs-RF/Simulation Files/Tuned Random Forest/simstudy1final_complexrf.Rdata")
 PE1$id = rep(1:(nrow(PE1)/2), each = 2)
 res.aov1 <- anova_test(
   data = PE1,
@@ -443,6 +446,27 @@ res.aov1 <- anova_test(
   effect.size = "pes")
 xtable(res.aov1)
 
+df_rf <- PE1[PE1$model == 'rf', ]
+print(df_rf)
+
+# Calculate the average of each repetition
+average_performance_untuned <- df_rf %>%
+  group_by(repetition) %>%
+  summarise(across(c(N, pe, vareta), mean, .names = "mean_{col}"))
+xtable(average_performance_untuned)
+# Calculate the overall average across all repetitions
+overall_average_untuned <- average_performance_untuned %>%
+  summarise(across(starts_with("mean"), mean))
+xtable(overall_average_untuned )
+# Calculate the average of each repetition
+average_performance_tuned <- df_rf %>%
+  group_by(repetition) %>%
+  summarise(across(c(N, pe, vareta), mean, .names = "mean_{col}"))
+
+# Calculate the overall average across all repetitions
+overall_average_tuned <- average_performance_tuned %>%
+  summarise(across(starts_with("mean"), mean))
+xtable(overall_average_tuned )
 load("/Users/magggien/Documents/BEP-SEM-vs-RF/simstudy2final_complexrf.Rdata")
 PE2$id = rep(1:(nrow(PE2)/2), each = 2)
 res.aov2 <- anova_test(
